@@ -90,6 +90,10 @@ function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader
 function resetData(){if(!confirm('Kembalikan data ke pengaturan awal?'))return;data=structuredClone(seed);persist();resetMatchForm();toast('Data awal dipulihkan.')}
 document.querySelectorAll('.admin-link').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAdminLoginFromMenu()}));
 document.getElementById('adminCode').addEventListener('keydown',e=>{if(e.key==='Enter')loginAdmin()});
-render();
+render();setInterval(()=>{
+  if(data.sponsors.length>1){
+    slideSponsors(1);
+  }
+},8000);
 </script>
 </body></html>
