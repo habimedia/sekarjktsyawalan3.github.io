@@ -95,5 +95,157 @@ render();setInterval(()=>{
     slideSponsors(1);
   }
 },8000);
+</script><style>
+.team-card{cursor:pointer;transition:transform .2s,border-color .2s}
+.team-card:hover{transform:translateY(-3px);border-color:var(--cyan)}
+.portal-modal{display:none;position:fixed;inset:0;z-index:60;background:#020914eF;padding:18px;overflow:auto}
+.portal-modal.show{display:block}
+.portal-panel{width:min(900px,100%);margin:35px auto;background:#0b1d33;border:1px solid #2c8ecb66;border-radius:22px;padding:22px}
+.portal-head{display:flex;align-items:center;gap:15px;margin-bottom:20px}
+.portal-head .crest{width:64px;height:64px;flex:0 0 64px}
+.portal-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.portal-tabs button.active{background:linear-gradient(135deg,#087ed0,#1aaeff);border-color:transparent}
+.portal-table{overflow-x:auto;border:1px solid var(--line);border-radius:13px}
+.portal-table table{min-width:560px}
+.portal-empty{padding:22px;text-align:center;color:var(--muted);font-size:12px}
+.admin-box .compact{margin-top:10px}
+.admin-box .compact input,.admin-box .compact select{margin-bottom:8px}
+@media(max-width:600px){.portal-panel{padding:15px;margin:12px auto}.portal-head h2{font-size:21px}}
+</style>
+
+<div class="portal-modal" id="teamPortal" aria-hidden="true">
+  <div class="portal-panel">
+    <div style="display:flex;justify-content:flex-end"><button class="btn" onclick="closeTeamPortal()">Tutup ✕</button></div>
+    <div class="portal-head"><div class="crest" id="portalCrest"></div><div><div class="eyebrow">TEAM PROFILE</div><h2 id="portalTeamName" style="margin:5px 0"></h2><div class="notice" id="portalTeamGroup"></div></div></div>
+    <div class="portal-tabs">
+      <button class="btn active" data-portal-tab="players" onclick="showPortalTab('players')">Pemain</button>
+      <button class="btn" data-portal-tab="coaches" onclick="showPortalTab('coaches')">Pelatih</button>
+      <button class="btn" data-portal-tab="officials" onclick="showPortalTab('officials')">Official</button>
+    </div>
+    <div id="portalContent"></div>
+  </div>
+</div>
+
+<script>
+/* Data tambahan disimpan terpisah agar struktur data lama tetap utuh. */
+const TEAM_EXTRA_KEY='sekarJkt3TeamProfiles';
+let teamExtra=readTeamExtra(),activePortalTeam=null,activePortalTab='players';
+function readTeamExtra(){
+  try{return JSON.parse(localStorage.getItem(TEAM_EXTRA_KEY))||{}}
+  catch(e){return {}}
+}
+function saveTeamExtra(){
+  localStorage.setItem(TEAM_EXTRA_KEY,JSON.stringify(teamExtra));
+  renderTeamAdmin();
+  if(activePortalTeam)renderTeamPortal();
+}
+function profileFor(id){
+  if(!teamExtra[id])teamExtra[id]={players:[],coaches:[],officials:[]};
+  ['players','coaches','officials'].forEach(k=>{if(!Array.isArray(teamExtra[id][k]))teamExtra[id][k]=[]});
+  return teamExtra[id];
+}
+function ageFromBirthdate(value){
+  if(!value)return '';
+  const birth=new Date(value+'T00:00:00');
+  if(Number.isNaN(birth.getTime()))return '';
+  const today=new Date();
+  let age=today.getFullYear()-birth.getFullYear();
+  if(today.getMonth()<birth.getMonth()||(today.getMonth()===birth.getMonth()&&today.getDate()<birth.getDate()))age--;
+  return age>=0?age:'';
+}
+function openTeamPortal(id){
+  const t=team(id);if(!t)return;
+  activePortalTeam=id;activePortalTab='players';
+  document.getElementById('teamPortal').classList.add('show');
+  document.getElementById('teamPortal').setAttribute('aria-hidden','false');
+  renderTeamPortal();
+}
+function closeTeamPortal(){
+  document.getElementById('teamPortal').classList.remove('show');
+  document.getElementById('teamPortal').setAttribute('aria-hidden','true');
+}
+function showPortalTab(tab){
+  activePortalTab=tab;
+  document.querySelectorAll('[data-portal-tab]').forEach(b=>b.classList.toggle('active',b.dataset.portalTab===tab));
+  renderTeamPortal();
+}
+function renderTeamPortal(){
+  const t=team(activePortalTeam);if(!t)return;
+  document.getElementById('portalCrest').innerHTML=crest(t,'');
+  document.getElementById('portalTeamName').textContent=t.name;
+  document.getElementById('portalTeamGroup').textContent='SEKAR JKT • GROUP '+t.group;
+  const p=profileFor(t.id);
+  const rows=p[activePortalTab]||[];
+  if(activePortalTab==='players'){
+    document.getElementById('portalContent').innerHTML=rows.length?
+      `<div class="portal-table"><table><thead><tr><th>#</th><th>NAMA PEMAIN</th><th>POSISI</th><th>NO. PUNGGUNG</th><th>UMUR</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.position||'-')}</td><td>${esc(x.number||'-')}</td><td>${ageFromBirthdate(x.birthdate)} th</td></tr>`).join('')}</tbody></table></div>`:
+      '<div class="portal-empty">Data pemain belum ditambahkan.</div>';
+  }else{
+    document.getElementById('portalContent').innerHTML=rows.length?
+      `<div class="news-grid">${rows.map(x=>`<article class="news"><small>${activePortalTab==='coaches'?'PELATIH':'OFFICIAL'}</small><h3>${esc(x.name)}</h3><p>${esc(x.role||'-')}</p></article>`).join('')}</div>`:
+      `<div class="portal-empty">Data ${activePortalTab==='coaches'?'pelatih':'official'} belum ditambahkan.</div>`;
+  }
+}
+function renderTeamAdmin(){
+  const host=document.getElementById('teamProfileAdminList');if(!host)return;
+  const id=document.getElementById('profileTeamSelect')?.value;
+  if(!id){host.innerHTML='';return}
+  const p=profileFor(id);
+  const list=[...p.players.map((x,i)=>({...x,_type:'players',_index:i})),...p.coaches.map((x,i)=>({...x,_type:'coaches',_index:i})),...p.officials.map((x,i)=>({...x,_type:'officials',_index:i}))];
+  host.innerHTML=list.map(x=>`<div class="admin-item"><span>${esc(x.name)} • ${x._type==='players'?'Pemain':x._type==='coaches'?'Pelatih':'Official'}</span><button class="btn" onclick="deleteProfilePerson('${id}','${x._type}',${x._index})">Hapus</button></div>`).join('')||'<div class="notice">Belum ada data untuk tim ini.</div>';
+}
+function addProfilePerson(){
+  const id=document.getElementById('profileTeamSelect').value;
+  const type=document.getElementById('profilePersonType').value;
+  const name=document.getElementById('profilePersonName').value.trim();
+  const role=document.getElementById('profilePersonRole').value.trim();
+  const number=document.getElementById('profilePersonNumber').value.trim();
+  const birthdate=document.getElementById('profilePersonBirthdate').value;
+  if(!id||!name){toast('Pilih tim dan isi nama.');return}
+  if(type==='players'&&!birthdate){toast('Isi tanggal lahir pemain.');return}
+  const p=profileFor(id);
+  p[type].push({id:'p'+Date.now(),name,role,position:type==='players'?role:'',number,birthdate:type==='players'?birthdate:''});
+  ['profilePersonName','profilePersonRole','profilePersonNumber','profilePersonBirthdate'].forEach(k=>document.getElementById(k).value='');
+  saveTeamExtra();toast('Data profil berhasil ditambahkan.');
+}
+function deleteProfilePerson(teamId,type,index){
+  if(!confirm('Hapus data ini?'))return;
+  profileFor(teamId)[type].splice(index,1);saveTeamExtra();toast('Data dihapus.');
+}
+function toggleBirthdateField(){
+  const isPlayer=document.getElementById('profilePersonType').value==='players';
+  document.getElementById('profileBirthField').style.display=isPlayer?'grid':'none';
+  document.getElementById('profileNumberField').style.display=isPlayer?'grid':'none';
+  document.getElementById('profileRoleLabel').textContent=isPlayer?'Posisi':'Jabatan';
+}
+function initTeamProfiles(){
+  const grid=document.getElementById('teamGrid');
+  if(grid)grid.addEventListener('click',e=>{
+    const card=e.target.closest('.team-card');if(!card)return;
+    const index=[...grid.children].indexOf(card),t=data.teams[index];if(t)openTeamPortal(t.id);
+  });
+  const adminGrid=document.querySelector('#admin .admin-grid');
+  if(adminGrid&&!document.getElementById('teamProfileAdmin')){
+    const box=document.createElement('div');box.className='admin-box';box.id='teamProfileAdmin';
+    box.innerHTML=`<h3>👥 Profil Pemain, Pelatih & Official</h3>
+      <div class="field"><label>Pilih Tim</label><select id="profileTeamSelect" onchange="renderTeamAdmin()"></select></div>
+      <div class="field"><label>Jenis Data</label><select id="profilePersonType" onchange="toggleBirthdateField()"><option value="players">Pemain</option><option value="coaches">Pelatih</option><option value="officials">Official</option></select></div>
+      <div class="field"><label>Nama</label><input id="profilePersonName" placeholder="Nama lengkap"></div>
+      <div class="field"><label id="profileRoleLabel">Posisi</label><input id="profilePersonRole" placeholder="Contoh: Penjaga gawang / Manajer"></div>
+      <div class="field" id="profileNumberField"><label>Nomor Punggung</label><input id="profilePersonNumber" inputmode="numeric" placeholder="Nomor pemain"></div>
+      <div class="field" id="profileBirthField"><label>Tanggal Lahir (khusus admin)</label><input id="profilePersonBirthdate" type="date"></div>
+      <button class="btn primary" onclick="addProfilePerson()">Tambah Data</button>
+      <div class="admin-list" id="teamProfileAdminList"></div>
+      <p class="notice">Tanggal lahir disimpan untuk perhitungan umur dan tidak ditampilkan pada portal publik.</p>`;
+    adminGrid.insertBefore(box,adminGrid.firstChild);
+  }
+  const sel=document.getElementById('profileTeamSelect');
+  if(sel){sel.innerHTML=data.teams.map(t=>`<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('');renderTeamAdmin()}
+}
+const originalRenderTeams=renderTeams;
+renderTeams=function(){originalRenderTeams();};
+const originalRender=render;
+render=function(){originalRender();initTeamProfiles();};
+initTeamProfiles();
 </script>
 </body></html>
