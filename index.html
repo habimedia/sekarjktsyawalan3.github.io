@@ -168,7 +168,8 @@ function slideSponsors(dir){
   }
   setTimeout(updateSponsorDots,350);
 }function renderNews(){document.getElementById('newsGrid').innerHTML=data.news.map(n=>`<article class="news"><small>SEKAR JKT UPDATE</small><h3>${esc(n.title)}</h3><p>${esc(n.body)}</p></article>`).join('')||'<div class="empty">Belum ada pengumuman.</div>';renderAdminLists()}
-function renderAdminLists(){let ml=document.getElementById('adminMatchList');if(ml)ml.innerHTML=data.matches.map(m=>`<div class="admin-item"><span>${esc(team(m.home)?.name||'?')} vs ${esc(team(m.away)?.name||'?')} • ${m.status==='done'?'Selesai':m.status==='live'?'Live':'Terjadwal'}</span><span><button class="btn" onclick="editMatch('${esc(m.id)}')">Edit</button> <button class="btn" onclick="deleteMatch('${esc(m.id)}')">Hapus</button></span></div>`).join('');let sl=document.getElementById('adminSponsorList');if(sl)sl.innerHTML=data.sponsors.map(s=>`<div class="admin-item"><span>${esc(s.name)}</span><button class="btn" onclick="deleteSponsor('${esc(s.id)}')">Hapus</button></div>`).join('');let nl=document.getElementById('adminNewsList');if(nl)nl.innerHTML=data.news.map(n=>`<div class="admin-item"><span>${esc(n.title)}</span><button class="btn" onclick="deleteNews('${esc(n.id)}')">Hapus</button></div>`).join('')}
+function renderAdminLists(){let ml=document.getElementById('adminMatchList');if(ml)ml.innerHTML=data.matches.map(m=>`<div class="admin-item"><span>${esc(team(m.home)?.name||'?')} vs ${esc(team(m.away)?.name||'?')} • ${m.status==='done'?'Selesai':m.status==='live'?'Live':'Terjadwal'}</span><span><button class="btn" onclick="editMatch('${esc(m.id)}')">Edit</button> <button class="btn" onclick="deleteMatch('${esc(m.id)}')">Hapus</button></span></div>`).join('');let sl=document.getElementById('adminSponsorList');
+if(sl)sl.innerHTML=data.sponsors.map((s,i)=>`<div class="admin-item"><span>${i+1}. ${esc(s.name)}</span><span><button class="btn" onclick="moveSponsor('${esc(s.id)}',-1)" ${i===0?'disabled':''}>↑</button> <button class="btn" onclick="moveSponsor('${esc(s.id)}',1)" ${i===data.sponsors.length-1?'disabled':''}>↓</button> <button class="btn" onclick="deleteSponsor('${esc(s.id)}')">Hapus</button></span></div>`).join('');if(sl)sl.innerHTML=data.sponsors.map(s=>`<div class="admin-item"><span>${esc(s.name)}</span><button class="btn" onclick="deleteSponsor('${esc(s.id)}')">Hapus</button></div>`).join('');let nl=document.getElementById('adminNewsList');if(nl)nl.innerHTML=data.news.map(n=>`<div class="admin-item"><span>${esc(n.title)}</span><button class="btn" onclick="deleteNews('${esc(n.id)}')">Hapus</button></div>`).join('')}
 function renderEventLogo(){const mark=document.getElementById('eventLogoMark');if(!mark)return;mark.innerHTML=data.eventLogo?`<img src="${esc(data.eventLogo)}" alt="Logo Event">`:'S';}
 function saveEventLogo(){const file=document.getElementById('eventLogoFile').files[0];const url=document.getElementById('eventLogoUrl').value.trim();if(file){if(!file.type.startsWith('image/')){toast('Pilih file gambar.');return}if(file.size>1500000){toast('Ukuran logo maksimal 1,5 MB.');return}const reader=new FileReader();reader.onload=()=>{data.eventLogo=reader.result;persist();document.getElementById('eventLogoUrl').value='';document.getElementById('eventLogoFile').value='';toast('Logo event berhasil diperbarui.')};reader.readAsDataURL(file);return}if(!url){toast('Masukkan URL logo atau pilih gambar dari HP.');return}data.eventLogo=url;persist();toast('Logo event berhasil diperbarui.')}
 function removeEventLogo(){data.eventLogo='';persist();document.getElementById('eventLogoUrl').value='';document.getElementById('eventLogoFile').value='';toast('Logo kembali ke huruf S.')}
@@ -188,6 +189,15 @@ function saveMatch(){let home=document.getElementById('matchHome').value,away=do
 function deleteMatch(id){if(!confirm('Hapus pertandingan ini?'))return;data.matches=data.matches.filter(m=>m.id!==id);persist();toast('Pertandingan dihapus.')}
 function saveSponsor(){let name=document.getElementById('sponsorName').value.trim(),image=document.getElementById('sponsorImage').value.trim(),url=document.getElementById('sponsorUrl').value.trim();if(!name){toast('Isi nama sponsor terlebih dahulu.');return}data.sponsors.push({id:'s'+Date.now(),name,image,url});['sponsorName','sponsorImage','sponsorUrl'].forEach(id=>document.getElementById(id).value='');persist();toast('Sponsor ditambahkan.')}
 function deleteSponsor(id){if(!confirm('Hapus sponsor ini?'))return;data.sponsors=data.sponsors.filter(s=>s.id!==id);persist();toast('Sponsor dihapus.')}
+  function moveSponsor(id,dir){
+  const i=data.sponsors.findIndex(s=>s.id===id);
+  const j=i+dir;
+  if(i<0||j<0||j>=data.sponsors.length)return;
+  [data.sponsors[i],data.sponsors[j]]=
+  [data.sponsors[j],data.sponsors[i]];
+  persist();
+  toast('Urutan sponsor diperbarui.');
+  }
 function saveNews(){let title=document.getElementById('newsTitle').value.trim(),body=document.getElementById('newsBody').value.trim();if(!title||!body){toast('Lengkapi judul dan isi pengumuman.');return}data.news.unshift({id:'n'+Date.now(),title,body});document.getElementById('newsTitle').value='';document.getElementById('newsBody').value='';persist();toast('Pengumuman diterbitkan.')}
 function deleteNews(id){if(!confirm('Hapus pengumuman ini?'))return;data.news=data.news.filter(n=>n.id!==id);persist();toast('Pengumuman dihapus.')}
 function exportData(){let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='sekar-jkt-fun-match-3-backup.json';a.click();URL.revokeObjectURL(url)}
@@ -195,10 +205,12 @@ function importData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader
 function resetData(){if(!confirm('Kembalikan data ke pengaturan awal?'))return;data=structuredClone(seed);persist();resetMatchForm();toast('Data awal dipulihkan.')}
 document.querySelectorAll('.admin-link').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();openAdminLoginFromMenu()}));
 document.getElementById('adminCode').addEventListener('keydown',e=>{if(e.key==='Enter')loginAdmin()});
-render();setInterval(()=>{
-  if(data.sponsors.length>1){
-    slideSponsors(1);
-  }
+render();
+document.getElementById('sponsorTrack').addEventListener('scroll',()=>{
+  window.requestAnimationFrame(updateSponsorDots);
+});
+setInterval(()=>{
+  if(data.sponsors.length>1)slideSponsors(1);
 },8000);
 </script><style>
 .team-card{cursor:pointer;transition:transform .2s,border-color .2s}
