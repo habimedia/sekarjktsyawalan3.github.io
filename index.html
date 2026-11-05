@@ -68,7 +68,7 @@ function persist(){localStorage.setItem('sekarJkt3Official',JSON.stringify(data)
 function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function team(id){return data.teams.find(t=>t.id===id)}
 function crest(t,cls=''){return t&&t.logo?`<img class="${cls}" src="${esc(t.logo)}" alt="Logo ${esc(t.name)}" onerror="this.style.display='none'">`:`<span class="${cls||'crest'}">${esc((t?.name||'S').split(' ').slice(-1)[0].slice(0,3).toUpperCase())}</span>`}
-function renderTeams(){document.getElementById('teamGrid').innerHTML=data.teams.map(t=>`<article class="team-card"><div class="crest">${t.logo?`<img src="${esc(t.logo)}" alt="${esc(t.name)}" onerror="this.style.display='none'">`:`${esc(t.name.split(' ').slice(-1)[0].slice(0,3))}`}</div><div><b>${esc(t.name)}</b><small>SYAWALAN FUN GAME • GROUP ${esc(t.group)}</small></div><span class="group-tag">${esc(t.group)}</span></article>`).join('')}
+function renderTeams(){document.getElementById('teamGrid').innerHTML=data.teams.map(t=>`<article class="team-card"><div class="crest">${t.logo?`<img src="${esc(t.logo)}" alt="${esc(t.name)}" onerror="this.style.display='none'">`:`${esc(t.name.split(' ').slice(-1)[0].slice(0,3))}`}</div><div><b>${esc(t.name)}</b><small>SYAWALAN FUN MATCH • GROUP ${esc(t.group)}</small></div><span class="group-tag">${esc(t.group)}</span></article>`).join('')}
 function statsFor(t){let s={p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};data.matches.filter(m=>m.status==='done'&&Number.isInteger(Number(m.sh))&&Number.isInteger(Number(m.sa))&&(m.home===t.id||m.away===t.id)).forEach(m=>{let home=m.home===t.id, f=Number(home?m.sh:m.sa),a=Number(home?m.sa:m.sh);s.p++;s.gf+=f;s.ga+=a;if(f>a){s.w++;s.pts+=3}else if(f===a){s.d++;s.pts++}else s.l++});s.gd=s.gf-s.ga;return s}
 function renderTables(){document.getElementById('tables').innerHTML=['A','B'].map(g=>{
     let rows=data.teams
@@ -290,7 +290,7 @@ function renderTeamPortal(){
   const t=team(activePortalTeam);if(!t)return;
   document.getElementById('portalCrest').innerHTML=crest(t,'');
   document.getElementById('portalTeamName').textContent=t.name;
-  document.getElementById('portalTeamGroup').textContent='SEKAR JKT • GROUP '+t.group;
+  document.getElementById('portalTeamGroup').textContent='SYAWALAN FUN MATCH • GROUP '+t.group;
   const p=profileFor(t.id);
   const rows=p[activePortalTab]||[];
   if(activePortalTab==='players'){
