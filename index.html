@@ -70,7 +70,60 @@ function team(id){return data.teams.find(t=>t.id===id)}
 function crest(t,cls=''){return t&&t.logo?`<img class="${cls}" src="${esc(t.logo)}" alt="Logo ${esc(t.name)}" onerror="this.style.display='none'">`:`<span class="${cls||'crest'}">${esc((t?.name||'S').split(' ').slice(-1)[0].slice(0,3).toUpperCase())}</span>`}
 function renderTeams(){document.getElementById('teamGrid').innerHTML=data.teams.map(t=>`<article class="team-card"><div class="crest">${t.logo?`<img src="${esc(t.logo)}" alt="${esc(t.name)}" onerror="this.style.display='none'">`:`${esc(t.name.split(' ').slice(-1)[0].slice(0,3))}`}</div><div><b>${esc(t.name)}</b><small>SYAWALAN FUN GAME • GROUP ${esc(t.group)}</small></div><span class="group-tag">${esc(t.group)}</span></article>`).join('')}
 function statsFor(t){let s={p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};data.matches.filter(m=>m.status==='done'&&Number.isInteger(Number(m.sh))&&Number.isInteger(Number(m.sa))&&(m.home===t.id||m.away===t.id)).forEach(m=>{let home=m.home===t.id, f=Number(home?m.sh:m.sa),a=Number(home?m.sa:m.sh);s.p++;s.gf+=f;s.ga+=a;if(f>a){s.w++;s.pts+=3}else if(f===a){s.d++;s.pts++}else s.l++});s.gd=s.gf-s.ga;return s}
-function renderTables(){document.getElementById('tables').innerHTML=['A','B'].map(g=>{let rows=data.teams.filter(t=>t.group===g).map(t=>({t,s:statsFor(t)})).sort((a,b)=>b.s.pts-a.s.pts||b.s.gd-a.s.gd||b.s.gf-a.s.gf||a.t.name.localeCompare(b.t.name));return `<div class="table-card"><div class="table-title">GROUP ${g}<span>KLASEMEN SEMENTARA</span></div><div class="table-scroll"><table><thead><tr><th>#</th><th>TEAM</th><th>MP</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>PTS</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.t.name)}</td><td>${r.s.p}</td><td>${r.s.w}</td><td>${r.s.d}</td><td>${r.s.l}</td><td>${r.s.gd>0?'+':''}${r.s.gd}</td><td class="points">${r.s.pts}</td></tr>`).join('')||'<tr><td colspan="8">Belum ada tim</td></tr>'}</tbody></table></div></div>`}).join('')}
+function renderTables(){document.getElementById('tables').innerHTML=['A','B'].map(g=>{
+    let rows=data.teams
+      .filter(t=>t.group===g)
+      .map(t=>({t,s:statsFor(t)}))
+      .sort((a,b)=>
+        b.s.pts-a.s.pts||
+        b.s.gd-a.s.gd||
+        b.s.gf-a.s.gf||
+        a.t.name.localeCompare(b.t.name)
+      );
+
+    return `<div class="table-card">
+      <div class="table-title">
+        GROUP ${g}
+        <span>KLASEMEN SEMENTARA</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>TEAM</th>
+              <th>MP</th>
+              <th>W</th>
+              <th>D</th>
+              <th>L</th>
+              <th>GD</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((r,i)=>`
+              <tr>
+                <td>${i+1}</td>
+                <td>
+                  <div class="standing-team">
+                    ${crest(r.t,'standing-crest')}
+                    <span>${esc(r.t.name)}</span>
+                  </div>
+                </td>
+                <td>${r.s.p}</td>
+                <td>${r.s.w}</td>
+                <td>${r.s.d}</td>
+                <td>${r.s.l}</td>
+                <td>${r.s.gd>0?'+':''}${r.s.gd}</td>
+                <td class="points">${r.s.pts}</td>
+              </tr>
+            `).join('')||'<tr><td colspan="8">Belum ada tim</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
 function matchCard(m){let h=team(m.home),a=team(m.away),done=m.status==='done',status=m.status==='done'?'done':m.status==='live'?'live':'scheduled',label=done?'SELESAI':status==='live'?'LIVE':'TERJADWAL';return `<article class="match"><div class="match-top"><span>${esc(m.date||'Tanggal belum diatur')} • ${esc(m.time||'')}</span><span class="status ${status}">${label}</span></div><div class="match-body"><div class="side">${crest(h,'mini-crest')}<b>${esc(h?.name||'Tim')}</b></div><div class="score">${done?`${Number(m.sh)} <small>:</small> ${Number(m.sa)}`:status==='live'?`${m.sh??0} <small>:</small> ${m.sa??0}`:'VS'}</div><div class="side away">${crest(a,'mini-crest')}<b>${esc(a?.name||'Tim')}</b></div></div><div class="match-foot">${esc(m.venue||'Lokasi menyusul')} • Grup ${esc(h?.group||'-')}</div></article>`}
 function renderFixtures(){let list=[...data.matches].sort((a,b)=>(a.date||'9999').localeCompare(b.date||'9999')||(a.time||'').localeCompare(b.time||''));document.getElementById('fixturesList').innerHTML=list.length?list.map(matchCard).join(''):'<div class="empty">Jadwal pertandingan akan ditampilkan di sini.</div>';document.getElementById('statMatches').textContent=String(data.matches.length).padStart(2,'0');document.getElementById('statCompleted').textContent=String(data.matches.filter(m=>m.status==='done'&&m.sh!==''&&m.sa!==''&&Number.isFinite(Number(m.sh))&&Number.isFinite(Number(m.sa))).length).padStart(2,'0')}
 function fillSelects(){let opts=data.teams.map(t=>`<option value="${esc(t.id)}">${esc(t.name)} (Grup ${esc(t.group)})</option>`).join('');['teamSelect','matchHome','matchAway'].forEach(id=>document.getElementById(id).innerHTML=opts)}
